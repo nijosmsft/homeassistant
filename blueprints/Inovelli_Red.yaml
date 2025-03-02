@@ -121,14 +121,7 @@ blueprint:
       default: []
       selector:
         action:
-    turn_on_pi:
-      name: Turn On Physical Interaction Switch
-      actions:
-        - action: input_boolean.turn_on
-          metadata: {}
-          data: {}
-          target:
-            entity_id: input_boolean.pi_living_room_switch
+
 mode: parallel
 max_exceeded: silent
 
@@ -152,6 +145,7 @@ variables:
   # Shorthand to access the trigger data
   button: "{{ trigger.event.data.property_key_name }}"
   action_type: "{{ trigger.event.data.value }}"
+  
 
 trigger:
 - platform: event
@@ -180,7 +174,7 @@ action:
             - conditions: "{{ action_type == release }}"
               sequence: 
                 - !input up_release_action
-                - !input turn_on_pi
+                - !myactions turn_on_pi
     - conditions: "{{ button == down_button }}"
       sequence:
         - choose:
@@ -200,3 +194,13 @@ action:
               sequence: !input down_release_action
     - conditions: "{{ button == config_button and action_type == press_x1 }}"
       sequence: !input config_action
+
+myactions:
+  turn_on_pi:
+    name: Turn On Physical Interaction Switch
+    actions:
+      - action: input_boolean.turn_on
+        metadata: {}
+        data: {}
+        target:
+          entity_id: input_boolean.pi_living_room_switch
