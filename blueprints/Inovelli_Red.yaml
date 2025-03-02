@@ -46,11 +46,11 @@ blueprint:
       name: Release Up Action
       description: Action to perform when releasing the up button
       default: []
-        - action: input_boolean.turn_on
-          metadata: {}
-          data: {}
-          target:
-            entity_id: input_boolean.pi_living_room_switch
+      action: input_boolean.turn_on
+      metadata: {}
+      data: {}
+      target:
+        entity_id: input_boolean.pi_living_room_switch
       selector:
         action:
 
