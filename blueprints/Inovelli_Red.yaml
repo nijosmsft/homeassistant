@@ -20,7 +20,8 @@ blueprint:
     pi_switch:
       name: Physical interaction switch
       selector:
-        device:
+        entity:
+          domain: input_boolean
           multiple: false
 
     up_action:
