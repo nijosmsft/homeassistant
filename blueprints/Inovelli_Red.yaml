@@ -1,0 +1,197 @@
+# Note for black dimmer series you need very specific firmware versions to support scenes: https://support.inovelli.com/portal/en/kb/articles/firmware-change-log-lzw31-dimmer-switch-black-series
+blueprint:
+  name: Inovelli On/Off or Dimmer Switch Scenes (ZWave-JS)
+  description: >
+    Perform actions on various scenes supported by the Inovelli On/Off or Dimmer Switches
+
+    Note that the x2, x3, x4, x5 variants DO NOT work if you have put your switch in 'Instant On' mode.
+    Note for black dimmer series you need very specific firmware versions to support scenes: https://support.inovelli.com/portal/en/kb/articles/firmware-change-log-lzw31-dimmer-switch-black-series    
+    
+  domain: automation
+  input:
+    inovelli_switch:
+      name: Inovelli On/Off Switch
+      description: The Inovelli On/Off or Dimmer Switch to do actions on
+      selector:
+        device:
+          multiple: true
+          integration: zwave_js
+          manufacturer: Inovelli
+    pi_switch:
+      name: Physical interaction switch
+      selector:
+        device:
+          multiple: false
+
+    up_action:
+      name: Press Up Once Action
+      description: Action to perform when pressing up once
+      default: []
+      selector:
+        action:
+    down_action:
+      name: Press Down Once Action
+      description: Action to perform when pressing down once
+      default: []
+      selector:
+        action:
+
+    up_hold_action:
+      name: Hold Up Action
+      description: Action to perform when holding the up button
+      default: []
+      selector:
+        action:
+    up_release_action:
+      name: Release Up Action
+      description: Action to perform when releasing the up button
+      default: []
+        - action: input_boolean.turn_on
+          metadata: {}
+          data: {}
+          target:
+            entity_id: input_boolean.pi_living_room_switch
+      selector:
+        action:
+
+    down_hold_action:
+      name: Hold Down Action
+      description: Action to perform when holding the down button
+      default: []
+      selector:
+        action:
+    down_release_action:
+      name: Release Down Action
+      description: Action to perform when releasing the down button
+      default: []
+      selector:
+        action:
+
+    config_action:
+      name: Config Button Action
+      description: The action to perform when the config button is pressed once
+      default: []
+      selector:
+        action:
+
+    up_x2_action:
+      name: Press Up Twice Action
+      description: Action to perform when pressing up twice
+      default: []
+      selector:
+        action:
+    down_x2_action:
+      name: Press Down Twice Action
+      description: Action to perform when pressing down twice
+      default: []
+      selector:
+        action:
+
+    up_x3_action:
+      name: Press Up 3 Times Action
+      description: Action to perform on when pressing up 3 times
+      default: []
+      selector:
+        action:
+    down_x3_action:
+      name: Press Down 3 Times Action
+      description: Action to perform when pressing down 3 times
+      default: []
+      selector:
+        action:
+
+    up_x4_action:
+      name: Press Up 4 Times Action
+      description: Action to perform when pressing up 4 times
+      default: []
+      selector:
+        action:
+    down_x4_action:
+      name: Press Down 4 Times Action
+      description: Action to perform when pressing down 4 times
+      default: []
+      selector:
+        action:
+
+    up_x5_action:
+      name: Press Up 5 Times Action
+      description: Action to perform when pressing up 5 times
+      default: []
+      selector:
+        action:
+    down_x5_action:
+      name: Press Down 5 Times Action
+      description: Action to perform when pressing down 5 times
+      default: []
+      selector:
+        action:
+
+mode: parallel
+max_exceeded: silent
+
+variables:
+  # Mappings from https://support.inovelli.com/portal/en/kb/articles/how-to-setting-up-scenes-in-home-assistant
+  
+  # Buttons (scene_id)
+  down_button: "001"
+  up_button: "002"
+  config_button: "003"
+
+  # Action types (scene_value_id)
+  press_x1: "KeyPressed"
+  press_x2: "KeyPressed2x"
+  press_x3: "KeyPressed3x"
+  press_x4: "KeyPressed4x"
+  press_x5: "KeyPressed5x"
+  hold: "KeyHeldDown"
+  release: "KeyReleased"
+
+  # Shorthand to access the trigger data
+  button: "{{ trigger.event.data.property_key_name }}"
+  action_type: "{{ trigger.event.data.value }}"
+
+trigger:
+- platform: event
+  event_type: zwave_js_value_notification
+  event_data:
+    command_class: 91
+    device_id: !input inovelli_switch
+
+action:
+  choose:
+    - conditions: "{{ button == up_button }}"
+      sequence:
+        - choose:
+            - conditions: "{{ action_type == press_x1 }}"
+              sequence: !input up_action
+            - conditions: "{{ action_type == press_x2 }}"
+              sequence: !input up_x2_action
+            - conditions: "{{ action_type == press_x3 }}"
+              sequence: !input up_x3_action
+            - conditions: "{{ action_type == press_x4 }}"
+              sequence: !input up_x4_action
+            - conditions: "{{ action_type == press_x5 }}"
+              sequence: !input up_x5_action
+            - conditions: "{{ action_type == hold }}"
+              sequence: !input up_hold_action
+            - conditions: "{{ action_type == release }}"
+              sequence: !input up_release_action
+    - conditions: "{{ button == down_button }}"
+      sequence:
+        - choose:
+            - conditions: "{{ action_type == press_x1 }}"
+              sequence: !input down_action
+            - conditions: "{{ action_type == press_x2 }}"
+              sequence: !input down_x2_action
+            - conditions: "{{ action_type == press_x3 }}"
+              sequence: !input down_x3_action
+            - conditions: "{{ action_type == press_x4 }}"
+              sequence: !input down_x4_action
+            - conditions: "{{ action_type == press_x5 }}"
+              sequence: !input down_x5_action
+            - conditions: "{{ action_type == hold }}"
+              sequence: !input down_hold_action
+            - conditions: "{{ action_type == release }}"
+              sequence: !input down_release_action
+    - conditions: "{{ button == config_button and action_type == press_x1 }}"
+      sequence: !input config_action
