@@ -120,7 +120,14 @@ blueprint:
       default: []
       selector:
         action:
-
+    turn_on_pi:
+      name: Turn On Physical Interaction Switch
+      actions:
+        - action: input_boolean.turn_on
+          metadata: {}
+          data: {}
+          target:
+            entity_id: input_boolean.pi_living_room_switch
 mode: parallel
 max_exceeded: silent
 
@@ -172,6 +179,7 @@ action:
             - conditions: "{{ action_type == release }}"
               sequence: 
                 - !input up_release_action
+                - !input turn_on_pi
                 - action: input_boolean.turn_on
                   metadata: {}
                   data: {}
