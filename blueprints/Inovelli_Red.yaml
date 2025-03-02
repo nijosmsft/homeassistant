@@ -46,11 +46,6 @@ blueprint:
       name: Release Up Action
       description: Action to perform when releasing the up button
       default: []
-      action: input_boolean.turn_on
-      metadata: {}
-      data: {}
-      target:
-        entity_id: input_boolean.pi_living_room_switch
       selector:
         action:
 
@@ -175,7 +170,13 @@ action:
             - conditions: "{{ action_type == hold }}"
               sequence: !input up_hold_action
             - conditions: "{{ action_type == release }}"
-              sequence: !input up_release_action
+              sequence: 
+                - !input up_release_action
+                - action: input_boolean.turn_on
+                  metadata: {}
+                  data: {}
+                  target:
+                    entity_id: input_boolean.pi_living_room_switch
     - conditions: "{{ button == down_button }}"
       sequence:
         - choose:
