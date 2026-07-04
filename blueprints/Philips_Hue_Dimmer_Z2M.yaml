@@ -1,0 +1,138 @@
+blueprint:
+  name: Philips Hue Dimmer Switch (Zigbee2MQTT)
+  description: >
+    Run actions from a Philips Hue Dimmer Switch paired through Zigbee2MQTT.
+    Select the Zigbee2MQTT action sensor for the dimmer switch.
+
+    Supports the common Hue Dimmer action names exposed by Zigbee2MQTT:
+    on_press, on_hold, on_press_release, on_hold_release,
+    up_press, up_hold, up_press_release, up_hold_release,
+    down_press, down_hold, down_press_release, down_hold_release,
+    off_press, off_hold, off_press_release, off_hold_release, and hue_press.
+  domain: automation
+  input:
+    action_sensor:
+      name: Zigbee2MQTT action sensor
+      description: The action sensor entity for the Philips Hue Dimmer Switch.
+      selector:
+        entity:
+          domain: sensor
+          multiple: false
+
+    on_press_action:
+      name: On button press action
+      default: []
+      selector:
+        action:
+    on_hold_action:
+      name: On button hold action
+      default: []
+      selector:
+        action:
+    on_release_action:
+      name: On button release action
+      default: []
+      selector:
+        action:
+
+    up_press_action:
+      name: Brightness up button press action
+      default: []
+      selector:
+        action:
+    up_hold_action:
+      name: Brightness up button hold action
+      default: []
+      selector:
+        action:
+    up_release_action:
+      name: Brightness up button release action
+      default: []
+      selector:
+        action:
+
+    down_press_action:
+      name: Brightness down button press action
+      default: []
+      selector:
+        action:
+    down_hold_action:
+      name: Brightness down button hold action
+      default: []
+      selector:
+        action:
+    down_release_action:
+      name: Brightness down button release action
+      default: []
+      selector:
+        action:
+
+    off_press_action:
+      name: Off button press action
+      default: []
+      selector:
+        action:
+    off_hold_action:
+      name: Off button hold action
+      default: []
+      selector:
+        action:
+    off_release_action:
+      name: Off button release action
+      default: []
+      selector:
+        action:
+
+    hue_press_action:
+      name: Hue button press action
+      description: Action for the center Hue button on dimmer models that expose hue_press.
+      default: []
+      selector:
+        action:
+
+mode: restart
+max_exceeded: silent
+
+trigger:
+  - platform: state
+    entity_id: !input action_sensor
+
+condition:
+  - condition: template
+    value_template: "{{ trigger.to_state.state not in ['unknown', 'unavailable', '', None] }}"
+
+variables:
+  action: "{{ trigger.to_state.state }}"
+
+action:
+  - choose:
+      - conditions: "{{ action == 'on_press' }}"
+        sequence: !input on_press_action
+      - conditions: "{{ action == 'on_hold' }}"
+        sequence: !input on_hold_action
+      - conditions: "{{ action in ['on_press_release', 'on_hold_release'] }}"
+        sequence: !input on_release_action
+
+      - conditions: "{{ action == 'up_press' }}"
+        sequence: !input up_press_action
+      - conditions: "{{ action == 'up_hold' }}"
+        sequence: !input up_hold_action
+      - conditions: "{{ action in ['up_press_release', 'up_hold_release'] }}"
+        sequence: !input up_release_action
+
+      - conditions: "{{ action == 'down_press' }}"
+        sequence: !input down_press_action
+      - conditions: "{{ action == 'down_hold' }}"
+        sequence: !input down_hold_action
+      - conditions: "{{ action in ['down_press_release', 'down_hold_release'] }}"
+        sequence: !input down_release_action
+
+      - conditions: "{{ action == 'off_press' }}"
+        sequence: !input off_press_action
+      - conditions: "{{ action == 'off_hold' }}"
+        sequence: !input off_hold_action
+      - conditions: "{{ action in ['off_press_release', 'off_hold_release'] }}"
+        sequence: !input off_release_action
+
+      - conditions: "{{ action == 'hue_press' }}"
+        sequence: !input hue_press_action
