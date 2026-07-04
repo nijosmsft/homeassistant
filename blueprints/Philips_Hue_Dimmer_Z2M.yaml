@@ -1,5 +1,6 @@
 blueprint:
-  name: Philips Hue Dimmer Switch (Zigbee2MQTT)
+  name: Philips Hue Dimmer Switch (Zigbee2MQTT MQTT Topic)
+  source_url: https://raw.githubusercontent.com/nijosmsft/homeassistant/main/blueprints/Philips_Hue_Dimmer_Z2M.yaml
   description: >
     Run actions from a Philips Hue Dimmer Switch paired through Zigbee2MQTT.
     Enter the MQTT topic for the dimmer switch, usually
