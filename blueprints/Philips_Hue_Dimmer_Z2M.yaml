@@ -2,7 +2,9 @@ blueprint:
   name: Philips Hue Dimmer Switch (Zigbee2MQTT)
   description: >
     Run actions from a Philips Hue Dimmer Switch paired through Zigbee2MQTT.
-    Select the Zigbee2MQTT action sensor for the dimmer switch.
+    Enter the MQTT topic for the dimmer switch, usually
+    zigbee2mqtt/<friendly_name>. If your setup publishes a separate action topic,
+    use zigbee2mqtt/<friendly_name>/action instead.
 
     Supports the common Hue Dimmer action names exposed by Zigbee2MQTT:
     on_press, on_hold, on_press_release, on_hold_release,
@@ -11,13 +13,14 @@ blueprint:
     off_press, off_hold, off_press_release, off_hold_release, and hue_press.
   domain: automation
   input:
-    action_sensor:
-      name: Zigbee2MQTT action sensor
-      description: The action sensor entity for the Philips Hue Dimmer Switch.
+    mqtt_topic:
+      name: Zigbee2MQTT MQTT topic
+      description: >
+        The MQTT topic for the dimmer switch, for example zigbee2mqtt/office_dimmer.
+        This blueprint reads the action field from JSON payloads, or uses the raw
+        payload if the topic is zigbee2mqtt/<friendly_name>/action.
       selector:
-        entity:
-          domain: sensor
-          multiple: false
+        text:
 
     on_press_action:
       name: On button press action
@@ -94,15 +97,15 @@ mode: restart
 max_exceeded: silent
 
 trigger:
-  - platform: state
-    entity_id: !input action_sensor
+  - platform: mqtt
+    topic: !input mqtt_topic
+
+variables:
+  action: "{{ trigger.payload_json.action | default('', true) if trigger.payload_json is defined else trigger.payload }}"
 
 condition:
   - condition: template
-    value_template: "{{ trigger.to_state.state not in ['unknown', 'unavailable', '', None] }}"
-
-variables:
-  action: "{{ trigger.to_state.state }}"
+    value_template: "{{ action not in ['unknown', 'unavailable', '', None] }}"
 
 action:
   - choose:
