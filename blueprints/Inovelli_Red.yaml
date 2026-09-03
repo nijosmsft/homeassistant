@@ -5,8 +5,8 @@ blueprint:
     Perform actions on various scenes supported by the Inovelli On/Off or Dimmer Switches
 
     Note that the x2, x3, x4, x5 variants DO NOT work if you have put your switch in 'Instant On' mode.
-    Note for black dimmer series you need very specific firmware versions to support scenes: https://support.inovelli.com/portal/en/kb/articles/firmware-change-log-lzw31-dimmer-switch-black-series    
-    
+    Note for black dimmer series you need very specific firmware versions to support scenes: https://support.inovelli.com/portal/en/kb/articles/firmware-change-log-lzw31-dimmer-switch-black-series
+
   domain: automation
   input:
     inovelli_switch:
@@ -14,14 +14,47 @@ blueprint:
       description: The Inovelli On/Off or Dimmer Switch to do actions on
       selector:
         device:
-          multiple: true
+          multiple: false
           integration: zwave_js
           manufacturer: Inovelli
+
+    inovelli_light_entity:
+      name: Light entity for inovelli_switch
+      selector:
+        entity:
+          domain: light
+          multiple: false
+
     pi_switch:
-      name: Physical interaction switch
+      name: Physical interaction tracking bool entity
+      default: ""
       selector:
         entity:
           domain: input_boolean
+          multiple: false
+
+    physical_interaction_timer:
+      name: Physical interaction timer entity
+      default: ""
+      selector:
+        entity:
+          domain: timer
+          multiple: false
+
+    physical_interaction_delay:
+      name: Physical interaction delay secs
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 3600
+          unit_of_measurement: seconds
+
+    light_entity:
+      name: Light to act on
+      selector:
+        entity:
+          domain: light
           multiple: false
 
     up_action:
@@ -127,11 +160,13 @@ max_exceeded: silent
 
 variables:
   # Mappings from https://support.inovelli.com/portal/en/kb/articles/how-to-setting-up-scenes-in-home-assistant
-  
+
   # Buttons (scene_id)
   down_button: "001"
   up_button: "002"
   config_button: "003"
+  aux_up_button: "004"
+  aux_down_button: "005"
 
   # Action types (scene_value_id)
   press_x1: "KeyPressed"
@@ -141,60 +176,262 @@ variables:
   press_x5: "KeyPressed5x"
   hold: "KeyHeldDown"
   release: "KeyReleased"
+  aux_x1: 0
+  aux_hold: 2
+  aux_release: 1
 
   # Shorthand to access the trigger data
   button: "{{ trigger.event.data.property_key_name }}"
   action_type: "{{ trigger.event.data.value }}"
-  
 
+  inovelli_entity: !input inovelli_light_entity
+  light_entity_id: !input light_entity
+  pi_switch_id: !input pi_switch
+  pi_timer_id: !input physical_interaction_timer
+  pi_delay: !input physical_interaction_delay
+  #brightness: 80
+  brightness: "{{ ((state_attr(inovelli_entity,'brightness') | float(0)) / 255 * 100) | round(0) | int }}"
 trigger:
-- platform: event
-  event_type: zwave_js_value_notification
-  event_data:
-    command_class: 91
-    device_id: !input inovelli_switch
+  - platform: event
+    event_type: zwave_js_value_notification
+    event_data:
+      command_class: 91
+      device_id: !input inovelli_switch
 
 action:
   choose:
-    - conditions: "{{ button == up_button }}"
+    - conditions:
+        - condition: or
+          conditions:
+            - condition: template
+              value_template: "{{ button == up_button }}"
+            - condition: template
+              value_template: "{{ button == aux_up_button }}"
       sequence:
         - choose:
-            - conditions: "{{ action_type == press_x1 }}"
-              sequence: !input up_action
+            - conditions:
+                - condition: or
+                  conditions:
+                    - condition: template
+                      value_template: "{{ action_type == press_x1 }}"
+                    - condition: template
+                      value_template: "{{ action_type == aux_x1 }}"
+              sequence:
+                - if:
+                    - condition: and
+                      conditions:
+                        - condition: template
+                          value_template: "{{ pi_switch_id is string and pi_switch_id | length > 0 }}"
+                        - condition: template
+                          value_template: "{{ pi_timer_id is string and pi_timer_id | length > 0 }}"
+                  then:
+                    - action: script.lighting_auto_light_control_helper_physical_interaction
+                      metadata: {}
+                      data:
+                        pi_switch: "{{pi_switch_id}}"
+                        physical_interaction_timer: "{{pi_timer_id}}"
+                        physical_interaction_delay: "{{pi_delay}}"
+                - action: script.lighting_auto_light_control_helper_repeat_actions
+                  metadata: {}
+                  data:
+                    brightness_pct: 99
+                    repeat_count: 3
+                    action: light.turn_on
+                    entity_id: "{{light_entity_id}}"
+                - sequence: !input up_action
             - conditions: "{{ action_type == press_x2 }}"
-              sequence: !input up_x2_action
+              sequence:
+                - if:
+                    - condition: and
+                      conditions:
+                        - condition: template
+                          value_template: "{{ pi_switch_id is string and pi_switch_id | length > 0 }}"
+                        - condition: template
+                          value_template: "{{ pi_timer_id is string and pi_timer_id | length > 0 }}"
+                  then:
+                    - action: script.lighting_auto_light_control_helper_physical_interaction
+                      metadata: {}
+                      data:
+                        pi_switch: "{{pi_switch_id}}"
+                        physical_interaction_timer: "{{pi_timer_id}}"
+                        physical_interaction_delay: "{{pi_delay}}"
+                - action: script.lighting_auto_light_control_helper_repeat_actions
+                  metadata: {}
+                  data:
+                    brightness_pct: 0
+                    brightness_step_pct: 3
+                    repeat_count: 3
+                    action: light.turn_on
+                    entity_id: "{{light_entity_id}}"
+                - sequence: !input up_x2_action
             - conditions: "{{ action_type == press_x3 }}"
-              sequence: !input up_x3_action
+              sequence:
+                - if:
+                    - condition: and
+                      conditions:
+                        - condition: template
+                          value_template: "{{ pi_switch_id is string and pi_switch_id | length > 0 }}"
+                        - condition: template
+                          value_template: "{{ pi_timer_id is string and pi_timer_id | length > 0 }}"
+                  then:
+                    - action: script.lighting_auto_light_control_helper_physical_interaction
+                      metadata: {}
+                      data:
+                        pi_switch: "{{pi_switch_id}}"
+                        physical_interaction_timer: "{{pi_timer_id}}"
+                        physical_interaction_delay: 0
+                - sequence: !input up_x3_action
             - conditions: "{{ action_type == press_x4 }}"
               sequence: !input up_x4_action
             - conditions: "{{ action_type == press_x5 }}"
               sequence: !input up_x5_action
-            - conditions: "{{ action_type == hold }}"
+            - conditions:
+                - condition: or
+                  conditions:
+                    - condition: template
+                      value_template: "{{ action_type == hold }}"
+                    - condition: template
+                      value_template: "{{ action_type == aux_hold }}"
               sequence: !input up_hold_action
-            - conditions: "{{ action_type == release }}"
-              sequence: 
-                - !input up_release_action
-                - action: input_boolean.turn_on
+            - conditions:
+                - condition: or
+                  conditions:
+                    - condition: template
+                      value_template: "{{ action_type == release }}"
+                    - condition: template
+                      value_template: "{{ action_type == aux_release }}"
+              sequence:
+                - if:
+                    - condition: and
+                      conditions:
+                        - condition: template
+                          value_template: "{{ pi_switch_id is string and pi_switch_id | length > 0 }}"
+                        - condition: template
+                          value_template: "{{ pi_timer_id is string and pi_timer_id | length > 0 }}"
+                  then:
+                    - action: script.lighting_auto_light_control_helper_physical_interaction
+                      metadata: {}
+                      data:
+                        pi_switch: "{{pi_switch_id}}"
+                        physical_interaction_timer: "{{pi_timer_id}}"
+                        physical_interaction_delay: "{{pi_delay}}"
+                - action: script.lighting_auto_light_control_helper_repeat_actions
                   metadata: {}
-                  data: {}
-                  target:
-                    entity_id: input_boolean.pi_living_room_switch
-    - conditions: "{{ button == down_button }}"
+                  data:
+                    brightness_pct: "{{brightness}}"
+                    repeat_count: 3
+                    action: light.turn_on
+                    entity_id: "{{light_entity_id}}"
+                - sequence: !input up_release_action
+    - conditions:
+        - condition: or
+          conditions:
+            - condition: template
+              value_template: "{{ button == down_button }}"
+            - condition: template
+              value_template: "{{ button == aux_down_button }}"
       sequence:
         - choose:
-            - conditions: "{{ action_type == press_x1 }}"
-              sequence: !input down_action
+            - conditions:
+                - condition: or
+                  conditions:
+                    - condition: template
+                      value_template: "{{ action_type == press_x1 }}"
+                    - condition: template
+                      value_template: "{{ action_type == aux_x1 }}"
+              sequence:
+                - if:
+                    - condition: and
+                      conditions:
+                        - condition: template
+                          value_template: "{{ pi_switch_id is string and pi_switch_id | length > 0 }}"
+                        - condition: template
+                          value_template: "{{ pi_timer_id is string and pi_timer_id | length > 0 }}"
+                  then:
+                    - action: script.lighting_auto_light_control_helper_physical_interaction
+                      metadata: {}
+                      data:
+                        pi_switch: "{{pi_switch_id}}"
+                        physical_interaction_timer: "{{pi_timer_id}}"
+                        physical_interaction_delay: "{{pi_delay}}"
+                - action: script.lighting_auto_light_control_helper_repeat_actions
+                  metadata: {}
+                  data:
+                    brightness_pct: 0
+                    repeat_count: 3
+                    action: light.turn_off
+                    entity_id: "{{light_entity_id}}"
+                    off_warn: 0
+                - sequence: !input down_action
             - conditions: "{{ action_type == press_x2 }}"
-              sequence: !input down_x2_action
+              sequence:
+                - if:
+                    - condition: and
+                      conditions:
+                        - condition: template
+                          value_template: "{{ pi_switch_id is string and pi_switch_id | length > 0 }}"
+                        - condition: template
+                          value_template: "{{ pi_timer_id is string and pi_timer_id | length > 0 }}"
+                  then:
+                    - action: script.lighting_auto_light_control_helper_physical_interaction
+                      metadata: {}
+                      data:
+                        pi_switch: "{{pi_switch_id}}"
+                        physical_interaction_timer: "{{pi_timer_id}}"
+                        physical_interaction_delay: "{{pi_delay}}"
+                - action: script.lighting_auto_light_control_helper_repeat_actions
+                  metadata: {}
+                  data:
+                    brightness_pct: 0
+                    brightness_step_pct: -3
+                    repeat_count: 3
+                    action: light.turn_on
+                    entity_id: "{{light_entity_id}}"
+                - sequence: !input down_x2_action
             - conditions: "{{ action_type == press_x3 }}"
               sequence: !input down_x3_action
             - conditions: "{{ action_type == press_x4 }}"
               sequence: !input down_x4_action
             - conditions: "{{ action_type == press_x5 }}"
               sequence: !input down_x5_action
-            - conditions: "{{ action_type == hold }}"
+            - conditions:
+                - condition: or
+                  conditions:
+                    - condition: template
+                      value_template: "{{ action_type == hold }}"
+                    - condition: template
+                      value_template: "{{ action_type == aux_hold }}"
               sequence: !input down_hold_action
-            - conditions: "{{ action_type == release }}"
-              sequence: !input down_release_action
+            - conditions:
+                - condition: or
+                  conditions:
+                    - condition: template
+                      value_template: "{{ action_type == release }}"
+                    - condition: template
+                      value_template: "{{ action_type == aux_release }}"
+              sequence:
+                - if:
+                    - condition: and
+                      conditions:
+                        - condition: template
+                          value_template: "{{ pi_switch_id is string and pi_switch_id | length > 0 }}"
+                        - condition: template
+                          value_template: "{{ pi_timer_id is string and pi_timer_id | length > 0 }}"
+                  then:
+                    - action: script.lighting_auto_light_control_helper_physical_interaction
+                      metadata: {}
+                      data:
+                        pi_switch: "{{pi_switch_id}}"
+                        physical_interaction_timer: "{{pi_timer_id}}"
+                        physical_interaction_delay: "{{pi_delay}}"
+                - action: script.lighting_auto_light_control_helper_repeat_actions
+                  metadata: {}
+                  data:
+                    brightness_pct: "{{brightness}}"
+                    repeat_count: 3
+                    action: light.turn_on
+                    entity_id: "{{light_entity_id}}"
+                - sequence: !input down_release_action
     - conditions: "{{ button == config_button and action_type == press_x1 }}"
-      sequence: !input config_action
+      sequence:
+        - sequence: !input config_action
