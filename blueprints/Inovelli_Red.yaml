@@ -52,8 +52,8 @@ blueprint:
           unit_of_measurement: seconds
 
     up_physical_interaction_delay:
-      name: Up physical interaction delay override
-      description: Set to 0 to use the default physical interaction delay.
+      name: Single Up physical interaction delay override
+      description: Applies only to a single Up press. Set to 0 to use the default delay.
       default: 0
       selector:
         number:
@@ -62,8 +62,8 @@ blueprint:
           unit_of_measurement: seconds
 
     down_physical_interaction_delay:
-      name: Down physical interaction delay override
-      description: Set to 0 to use the default physical interaction delay.
+      name: Single Down physical interaction delay override
+      description: Applies only to a single Down press. Set to 0 to use the default delay.
       default: 0
       selector:
         number:
@@ -285,7 +285,7 @@ action:
                       data:
                         pi_switch: "{{pi_switch_id}}"
                         physical_interaction_timer: "{{pi_timer_id}}"
-                        physical_interaction_delay: "{{up_pi_delay}}"
+                        physical_interaction_delay: "{{pi_delay}}"
                 - action: script.lighting_auto_light_control_helper_repeat_actions
                   metadata: {}
                   data:
@@ -345,7 +345,7 @@ action:
                       data:
                         pi_switch: "{{pi_switch_id}}"
                         physical_interaction_timer: "{{pi_timer_id}}"
-                        physical_interaction_delay: "{{up_pi_delay}}"
+                        physical_interaction_delay: "{{pi_delay}}"
                 - action: script.lighting_auto_light_control_helper_repeat_actions
                   metadata: {}
                   data:
@@ -409,7 +409,7 @@ action:
                       data:
                         pi_switch: "{{pi_switch_id}}"
                         physical_interaction_timer: "{{pi_timer_id}}"
-                        physical_interaction_delay: "{{down_pi_delay}}"
+                        physical_interaction_delay: "{{pi_delay}}"
                 - action: script.lighting_auto_light_control_helper_repeat_actions
                   metadata: {}
                   data:
@@ -454,7 +454,7 @@ action:
                       data:
                         pi_switch: "{{pi_switch_id}}"
                         physical_interaction_timer: "{{pi_timer_id}}"
-                        physical_interaction_delay: "{{down_pi_delay}}"
+                        physical_interaction_delay: "{{pi_delay}}"
                 - action: script.lighting_auto_light_control_helper_repeat_actions
                   metadata: {}
                   data:
