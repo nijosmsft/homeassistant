@@ -42,7 +42,28 @@ blueprint:
           multiple: false
 
     physical_interaction_delay:
-      name: Physical interaction delay secs
+      name: Default physical interaction delay
+      description: Used for both directions unless an Up or Down override is set.
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 3600
+          unit_of_measurement: seconds
+
+    up_physical_interaction_delay:
+      name: Up physical interaction delay override
+      description: Set to 0 to use the default physical interaction delay.
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 3600
+          unit_of_measurement: seconds
+
+    down_physical_interaction_delay:
+      name: Down physical interaction delay override
+      description: Set to 0 to use the default physical interaction delay.
       default: 0
       selector:
         number:
@@ -189,6 +210,16 @@ variables:
   pi_switch_id: !input pi_switch
   pi_timer_id: !input physical_interaction_timer
   pi_delay: !input physical_interaction_delay
+  up_pi_delay_override: !input up_physical_interaction_delay
+  down_pi_delay_override: !input down_physical_interaction_delay
+  up_pi_delay: >-
+    {{ (up_pi_delay_override | int(0))
+       if (up_pi_delay_override | int(0)) > 0
+       else (pi_delay | int(0)) }}
+  down_pi_delay: >-
+    {{ (down_pi_delay_override | int(0))
+       if (down_pi_delay_override | int(0)) > 0
+       else (pi_delay | int(0)) }}
   #brightness: 80
   brightness: "{{ ((state_attr(inovelli_entity,'brightness') | float(0)) / 255 * 100) | round(0) | int }}"
 trigger:
@@ -230,7 +261,7 @@ action:
                       data:
                         pi_switch: "{{pi_switch_id}}"
                         physical_interaction_timer: "{{pi_timer_id}}"
-                        physical_interaction_delay: "{{pi_delay}}"
+                        physical_interaction_delay: "{{up_pi_delay}}"
                 - action: script.lighting_auto_light_control_helper_repeat_actions
                   metadata: {}
                   data:
@@ -254,7 +285,7 @@ action:
                       data:
                         pi_switch: "{{pi_switch_id}}"
                         physical_interaction_timer: "{{pi_timer_id}}"
-                        physical_interaction_delay: "{{pi_delay}}"
+                        physical_interaction_delay: "{{up_pi_delay}}"
                 - action: script.lighting_auto_light_control_helper_repeat_actions
                   metadata: {}
                   data:
@@ -314,7 +345,7 @@ action:
                       data:
                         pi_switch: "{{pi_switch_id}}"
                         physical_interaction_timer: "{{pi_timer_id}}"
-                        physical_interaction_delay: "{{pi_delay}}"
+                        physical_interaction_delay: "{{up_pi_delay}}"
                 - action: script.lighting_auto_light_control_helper_repeat_actions
                   metadata: {}
                   data:
@@ -353,7 +384,7 @@ action:
                       data:
                         pi_switch: "{{pi_switch_id}}"
                         physical_interaction_timer: "{{pi_timer_id}}"
-                        physical_interaction_delay: "{{pi_delay}}"
+                        physical_interaction_delay: "{{down_pi_delay}}"
                 - action: script.lighting_auto_light_control_helper_repeat_actions
                   metadata: {}
                   data:
@@ -378,7 +409,7 @@ action:
                       data:
                         pi_switch: "{{pi_switch_id}}"
                         physical_interaction_timer: "{{pi_timer_id}}"
-                        physical_interaction_delay: "{{pi_delay}}"
+                        physical_interaction_delay: "{{down_pi_delay}}"
                 - action: script.lighting_auto_light_control_helper_repeat_actions
                   metadata: {}
                   data:
@@ -423,7 +454,7 @@ action:
                       data:
                         pi_switch: "{{pi_switch_id}}"
                         physical_interaction_timer: "{{pi_timer_id}}"
-                        physical_interaction_delay: "{{pi_delay}}"
+                        physical_interaction_delay: "{{down_pi_delay}}"
                 - action: script.lighting_auto_light_control_helper_repeat_actions
                   metadata: {}
                   data:
