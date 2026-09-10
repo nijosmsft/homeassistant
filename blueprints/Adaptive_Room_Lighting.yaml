@@ -1,0 +1,377 @@
+blueprint:
+  name: Adaptive Room Lighting
+  description: >
+    Coordinates occupancy lighting, home modes, app/HomeKit physical
+    interaction, auto-off timers, and shared physical-interaction timers.
+  domain: automation
+  input:
+    light_entity:
+      name: Light target
+      selector:
+        entity:
+          domain: light
+    occupancy_sensor:
+      name: Primary occupancy sensor
+      selector:
+        entity:
+          domain: binary_sensor
+    pi_occupancy_sensors:
+      name: PI-area occupancy sensors
+      description: >
+        Sensors that extend the shared physical-interaction timer. Include the
+        primary occupancy sensor and any sensors in the same PI area.
+      selector:
+        entity:
+          domain: binary_sensor
+          multiple: true
+    home_mode:
+      name: Home mode
+      selector:
+        entity:
+          domain: select
+    auto_off_timer:
+      name: Auto-off timer
+      selector:
+        entity:
+          domain: timer
+    pi_switch:
+      name: Physical-interaction boolean
+      selector:
+        entity:
+          domain: input_boolean
+    pi_timer:
+      name: Physical-interaction timer
+      selector:
+        entity:
+          domain: timer
+    physical_interaction_delay:
+      name: Physical-interaction duration
+      selector:
+        number:
+          min: 1
+          max: 3600
+          unit_of_measurement: seconds
+    app_users:
+      name: Home Assistant app users
+      description: List of Home Assistant user IDs treated as manual app control.
+      selector:
+        object:
+    app_debounce:
+      name: App/HomeKit debounce
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 10
+          step: 0.1
+          unit_of_measurement: seconds
+    door_sensor:
+      name: Door sensor
+      default: []
+      selector:
+        entity:
+          domain: binary_sensor
+    door_open_state:
+      name: Door open state
+      default: "on"
+      selector:
+        text:
+    door_open_off_delay:
+      name: Door-open off delay
+      default: 180
+      selector:
+        number:
+          min: 0
+          max: 3600
+          unit_of_measurement: seconds
+    humidity_sensor:
+      name: Humidity sensor
+      default: []
+      selector:
+        entity:
+          domain: sensor
+          device_class: humidity
+    humidity_threshold:
+      name: Humidity threshold
+      default: 80
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: "%"
+    dawn_brightness:
+      name: Dawn brightness
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: "%"
+    dawn_delay:
+      name: Dawn off delay
+      default: 60
+      selector:
+        number:
+          min: 0
+          max: 3600
+          unit_of_measurement: seconds
+    morning_brightness:
+      name: Morning brightness
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: "%"
+    morning_delay:
+      name: Morning off delay
+      default: 1200
+      selector:
+        number:
+          min: 0
+          max: 3600
+          unit_of_measurement: seconds
+    day_brightness:
+      name: Day brightness
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: "%"
+    day_delay:
+      name: Day off delay
+      default: 600
+      selector:
+        number:
+          min: 0
+          max: 3600
+          unit_of_measurement: seconds
+    dusk_brightness:
+      name: Dusk brightness
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: "%"
+    dusk_delay:
+      name: Dusk off delay
+      default: 60
+      selector:
+        number:
+          min: 0
+          max: 3600
+          unit_of_measurement: seconds
+    night_brightness:
+      name: Night brightness
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: "%"
+    night_delay:
+      name: Night off delay
+      default: 300
+      selector:
+        number:
+          min: 0
+          max: 3600
+          unit_of_measurement: seconds
+    sleep_brightness:
+      name: Sleep brightness
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: "%"
+    sleep_delay:
+      name: Sleep off delay
+      default: 60
+      selector:
+        number:
+          min: 0
+          max: 3600
+          unit_of_measurement: seconds
+    repeat_count:
+      name: Repeat count
+      default: 3
+      selector:
+        number:
+          min: 1
+          max: 10
+    off_warn:
+      name: Warn before auto-off
+      default: 1
+      selector:
+        number:
+          min: 0
+          max: 1
+
+mode: restart
+max_exceeded: silent
+
+variables:
+  target_light: !input light_entity
+  primary_occupancy: !input occupancy_sensor
+  pi_area_sensors: !input pi_occupancy_sensors
+  pi_switch_entity: !input pi_switch
+  pi_timer_entity: !input pi_timer
+  pi_delay: !input physical_interaction_delay
+  app_delay: !input app_debounce
+  door_sensor_input: !input door_sensor
+  humidity_sensor_input: !input humidity_sensor
+  door_sensor_entity: >-
+    {{ door_sensor_input if door_sensor_input is string else '' }}
+  humidity_sensor_entity: >-
+    {{ humidity_sensor_input if humidity_sensor_input is string else '' }}
+  pi_area_occupied: >-
+    {{ expand(pi_area_sensors)
+       | selectattr('state', 'eq', 'on')
+       | list
+       | count > 0 }}
+  active_pi_duration: >-
+    {{ state_attr(pi_timer_entity, 'duration') | default(pi_delay, true) }}
+
+trigger:
+  - platform: state
+    entity_id: !input pi_occupancy_sensors
+    id: occupancy
+  - platform: state
+    entity_id: !input home_mode
+    id: home_mode
+  - platform: state
+    entity_id: !input pi_switch
+    to: "off"
+    id: pi_off
+  - platform: event
+    event_type: state_changed
+    event_data:
+      entity_id: !input door_sensor
+    id: environment
+  - platform: event
+    event_type: state_changed
+    event_data:
+      entity_id: !input humidity_sensor
+    id: environment
+  - platform: event
+    event_type: timer.finished
+    event_data:
+      entity_id: !input auto_off_timer
+    id: auto_off_finished
+  - platform: event
+    event_type: timer.finished
+    event_data:
+      entity_id: !input pi_timer
+    id: pi_finished
+  - platform: event
+    event_type: homekit_state_change
+    event_data:
+      entity_id: !input light_entity
+    id: app
+  - platform: event
+    event_type: state_changed
+    event_data:
+      entity_id: !input light_entity
+    context:
+      user_id: !input app_users
+    id: app
+
+action:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: app
+        sequence:
+          - delay:
+              seconds: "{{ app_delay | float(0) }}"
+          - action: script.lighting_auto_light_control_helper_physical_interaction
+            data:
+              pi_switch: "{{ pi_switch_entity }}"
+              physical_interaction_delay: "{{ pi_delay | int }}"
+              physical_interaction_timer: "{{ pi_timer_entity }}"
+          - stop: App/HomeKit physical interaction handled
+      - conditions:
+          - condition: trigger
+            id: pi_finished
+        sequence:
+          - action: input_boolean.turn_off
+            target:
+              entity_id: "{{ pi_switch_entity }}"
+          - stop: Physical-interaction timer handled
+      - conditions:
+          - condition: trigger
+            id: auto_off_finished
+        sequence:
+          - action: script.lighting_auto_light_control_safe_off
+            data:
+              entity_id: !input light_entity
+              auto_off_timer: !input auto_off_timer
+              motion_sensor: !input occupancy_sensor
+              pi_switch: !input pi_switch
+              humidity_sensor: "{{ humidity_sensor_entity }}"
+              humidity_threshold: !input humidity_threshold
+              repeat_count: !input repeat_count
+              off_warn: !input off_warn
+          - stop: Auto-off timer handled
+  - if:
+      - condition: template
+        value_template: >-
+          {{ trigger.id == 'occupancy' and
+             is_state(pi_timer_entity, 'active') }}
+    then:
+      - action: timer.start
+        target:
+          entity_id: "{{ pi_timer_entity }}"
+        data:
+          duration: "{{ active_pi_duration }}"
+  - if:
+      - condition: template
+        value_template: >-
+          {{ trigger.id == 'occupancy' and
+             trigger.entity_id != primary_occupancy }}
+    then:
+      - stop: PI-area occupancy extended without changing this light
+  - if:
+      - condition: template
+        value_template: "{{ is_state(pi_switch_entity, 'on') }}"
+    then:
+      - if:
+          - condition: template
+            value_template: >-
+              {{ trigger.id != 'occupancy' and
+                 is_state(pi_timer_entity, 'active') }}
+        then:
+          - action: timer.start
+            target:
+              entity_id: "{{ pi_timer_entity }}"
+            data:
+              duration: "{{ active_pi_duration }}"
+      - stop: Automatic lighting suppressed by physical interaction
+  - action: script.lighting_auto_light_control
+    data:
+      entity_id: !input light_entity
+      motion_sensor: !input occupancy_sensor
+      auto_off_timer: !input auto_off_timer
+      pi_switch: !input pi_switch
+      pi_timer: !input pi_timer
+      door_sensor: "{{ door_sensor_entity }}"
+      door_open_state: !input door_open_state
+      door_open_off_delay: !input door_open_off_delay
+      humidity_sensor: "{{ humidity_sensor_entity }}"
+      humidity_threshold: !input humidity_threshold
+      dawn_brightness: !input dawn_brightness
+      dawn_delay: !input dawn_delay
+      morning_brightness: !input morning_brightness
+      morning_delay: !input morning_delay
+      day_brightness: !input day_brightness
+      day_delay: !input day_delay
+      dusk_brightness: !input dusk_brightness
+      dusk_delay: !input dusk_delay
+      night_brightness: !input night_brightness
+      night_delay: !input night_delay
+      sleep_brightness: !input sleep_brightness
+      sleep_delay: !input sleep_delay
+      repeat_count: !input repeat_count
