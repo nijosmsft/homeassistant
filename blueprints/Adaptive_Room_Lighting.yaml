@@ -28,7 +28,7 @@ blueprint:
       name: Home mode
       selector:
         entity:
-          domain: select
+          domain: input_select
     auto_off_timer:
       name: Auto-off timer
       selector:
@@ -353,6 +353,7 @@ action:
   - action: script.lighting_auto_light_control
     data:
       entity_id: !input light_entity
+      home_mode: !input home_mode
       motion_sensor: !input occupancy_sensor
       auto_off_timer: !input auto_off_timer
       pi_switch: !input pi_switch
