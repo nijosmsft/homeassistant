@@ -250,12 +250,12 @@ trigger:
     event_type: state_changed
     event_data:
       entity_id: !input door_sensor
-    id: environment
+    id: door_environment
   - platform: event
     event_type: state_changed
     event_data:
       entity_id: !input humidity_sensor
-    id: environment
+    id: humidity_environment
   - platform: event
     event_type: timer.finished
     event_data:
@@ -281,6 +281,23 @@ trigger:
 
 action:
   - choose:
+      - conditions:
+          - condition: trigger
+            id: humidity_environment
+        sequence:
+          - condition: template
+            value_template: >-
+              {% set old_state = trigger.event.data.old_state %}
+              {% set new_state = trigger.event.data.new_state %}
+              {% set threshold = humidity_threshold | float(80) %}
+              {% set old_value = old_state.state | float(-1)
+                 if old_state is not none else -1 %}
+              {% set new_value = new_state.state | float(-1)
+                 if new_state is not none else -1 %}
+              {{ new_value >= 0 and
+                 (old_value < 0 or
+                  (old_value < threshold <= new_value) or
+                  (old_value >= threshold > new_value)) }}
       - conditions:
           - condition: trigger
             id: app
